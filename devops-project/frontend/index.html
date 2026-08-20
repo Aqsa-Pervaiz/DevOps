@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>My Items</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <h1>My Items</h1>
+      <div>
+        <span id="welcomeMsg"></span>
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <form id="itemForm">
+      <input type="text" id="title" placeholder="Item title" required />
+      <input type="text" id="description" placeholder="Description (optional)" />
+      <button type="submit">Add Item</button>
+    </form>
+
+    <ul id="itemList"></ul>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    document.getElementById('welcomeMsg').textContent =
+      'Signed in as ' + localStorage.getItem('username');
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    });
+
+    async function loadItems() {
+      const res = await apiFetch('/api/items', { headers: authHeaders() });
+      const list = document.getElementById('itemList');
+      list.innerHTML = '';
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.clear();
+          window.location.href = 'login.html';
+        }
+        return;
+      }
+
+      const items = await res.json();
+      items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = item.completed ? 'completed' : '';
+        li.innerHTML = `
+          <div class="item-text">
+            <strong>${escapeHtml(item.title)}</strong>
+            <p>${escapeHtml(item.description || '')}</p>
+          </div>
+          <div class="item-actions">
+            <button data-action="toggle" data-id="${item.id}" data-completed="${item.completed}">
+              ${item.completed ? 'Undo' : 'Done'}
+            </button>
+            <button data-action="delete" data-id="${item.id}">Delete</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    document.getElementById('itemForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+
+      await apiFetch('/api/items', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ title, description }),
+      });
+
+      document.getElementById('itemForm').reset();
+      loadItems();
+    });
+
+    document.getElementById('itemList').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const id = btn.dataset.id;
+
+      if (btn.dataset.action === 'delete') {
+        await apiFetch(`/api/items/${id}`, { method: 'DELETE', headers: authHeaders() });
+      } else if (btn.dataset.action === 'toggle') {
+        const completed = btn.dataset.completed !== 'true';
+        await apiFetch(`/api/items/${id}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({ completed }),
+        });
+      }
+      loadItems();
+    });
+
+    loadItems();
+  </script>
+</body>
+</html>
