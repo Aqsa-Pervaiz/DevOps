@@ -65,7 +65,7 @@ Images are published to Docker Hub:
 - Backend: `aqsa9922/devops-project-backend:latest`
 - Frontend: `aqsa9922/devops-project-frontend:latest`
 
-Docker Hub links (share these in your report):
+Docker Hub links:
 - https://hub.docker.com/r/aqsa9922/devops-project-backend
 - https://hub.docker.com/r/aqsa9922/devops-project-frontend
 
